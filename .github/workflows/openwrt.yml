@@ -1,0 +1,72 @@
+
+name: Build OpenWrt
+
+on:
+  repository_dispatch:
+  workflow_dispatch:
+    inputs:
+      ssh:
+        description: 'SSH connection to Actions'
+        required: false
+        default: 'false'
+
+env:
+  UBUNTU_VER: 22.04
+  REPO_URL: https://github.com/openwrt/openwrt
+  REPO_TARGET: v22.03.5
+  SOURCECODEDIR: code
+  FEEDS_CONF: feeds.conf.default
+  CONFIG_FILE: .config
+  DIY_P1_SH: diy-part1.sh
+  DIY_P2_SH: diy-part2.sh
+  UPLOAD_BIN_DIR: false
+  UPLOAD_FIRMWARE: true
+  UPLOAD_COWTRANSFER: false
+  UPLOAD_WETRANSFER: false
+  UPLOAD_RELEASE: false
+  TZ: Asia/Shanghai
+
+jobs:
+  build:
+    runs-on: ubuntu:$UBUNTU_VER
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@main
+
+    - name: Initialization environment
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+      sudo apt update
+      sudo apt install -y build-essential clang flex bison \
+      g++ gawk gcc-multilib g++-multilib gettext git libncurses-dev \
+      libssl-dev python3-distutils rsync unzip zlib1g-dev file wget \
+      sudo rm -rf /var/lib/apt/lists/*
+      sudo timedatectl set-timezone "$TZ"
+      sudo mkdir -p $SOURCECODEDIR
+      sudo chown $USER:$GROUPS $SOURCECODEDIR
+
+    - name: Clone source code
+      run: |
+        df -hT $PWD
+        git clone $REPO_URL -b $REPO_TARGET $SOURCECODEDIR
+
+    - name: Update feeds
+      run: cd $SOURCECODEDIR && ./scripts/feeds update -a
+
+    - name: Install feeds
+      run: cd $SOURCECODEDIR && ./scripts/feeds install -a
+
+    - name: SSH connection to Actions
+      uses: P3TERX/ssh2actions@v1.0.0
+      if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false') || contains(github.event.action, 'ssh')
+      env:
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+
+    - name: what time run this
+      run: |
+      echo "hello aibottle"
+
+    
